@@ -1,0 +1,46 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: RDS
+
+Parameters:
+  AppName:
+    Type: String
+    Default: "MRGApp"
+  ResourcePrefix:
+    Type: String
+    Default: "MRG"
+
+Resources:
+  DBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: "Subnet group for RDS instance"
+      SubnetIds:
+        - !Ref PrivateSubnet
+      Tags:
+        - Key: Name
+          Value: !Sub "${ResourcePrefix}-db-subnet-group"
+        - Key: Creator
+          Value: !Ref AWS::AccountId
+        - Key: App
+          Value: !Ref AppName
+
+  RDSInstance:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBInstanceIdentifier: !Sub "${ResourcePrefix}-rds-instance"
+      AllocatedStorage: 20
+      DBInstanceClass: db.t2.micro
+      Engine: mysql
+      MasterUsername: admin
+      MasterUserPassword: admin123
+      VPCSecurityGroups:
+        - !Ref DBSecurityGroup
+      DBSubnetGroupName: !Ref DBSubnetGroup
+      PubliclyAccessible: false
+      Tags:
+        - Key: Name
+          Value: !Sub "${ResourcePrefix}-rds-instance"
+        - Key: Creator
+          Value: !Ref AWS::AccountId
+        - Key: App
+          Value: !Ref AppName

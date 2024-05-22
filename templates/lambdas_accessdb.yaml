@@ -1,0 +1,39 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Lambda Function to Access DB
+
+Parameters:
+  AppName:
+    Type: String
+    Default: "MRGApp"
+  ResourcePrefix:
+    Type: String
+    Default: "MRG"
+  DBSecretArn:
+    Type: String
+
+Resources:
+  LambdaAccessDB:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Code:
+        S3Bucket: !Sub "${ResourcePrefix}-lambda-code-bucket"
+        S3Key: access_db_lambda.zip
+      Runtime: nodejs14.x
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+        SubnetIds:
+          - !Ref PrivateSubnet
+      Environment:
+        Variables:
+          DB_SECRET_ARN: !Ref DBSecret.Arn
+          PARAMETER_ARN: !Ref ParameterStore.Arn
+      Tags:
+        - Key: Name
+          Value: !Sub "${ResourcePrefix}-access-db-lambda"
+        - Key: Creator
+          Value: !Ref AWS::AccountId
+        - Key: App
+          Value: !Ref AppName

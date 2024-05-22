@@ -1,0 +1,25 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Parameter Store
+
+Parameters:
+  AppName:
+    Type: String
+    Default: "MRGApp"
+  ResourcePrefix:
+    Type: String
+    Default: "MRG"
+
+Resources:
+  ParameterStore:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub "/${AppName}/endpointGoogleSheet"
+      Type: String
+      Value: "https://sheets.googleapis.com/v4/spreadsheets/your-google-sheet-id"
+      Tags:
+        - Key: Name
+          Value: !Sub "${ResourcePrefix}-endpointGoogleSheet"
+        - Key: Creator
+          Value: !Ref AWS::AccountId
+        - Key: App
+          Value: !Ref AppName

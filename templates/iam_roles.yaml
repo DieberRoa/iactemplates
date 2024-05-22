@@ -1,0 +1,42 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: IAM Roles
+
+Parameters:
+  AppName:
+    Type: String
+    Default: "MRGApp"
+  ResourcePrefix:
+    Type: String
+    Default: "MRG"
+
+Resources:
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: LambdaExecutionPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                  - secretsmanager:GetSecretValue
+                  - rds-db:connect
+                  - ssm:GetParameter
+                  - s3:GetObject
+                Resource: 
+                  - arn:aws:logs:*:*:*
+                  - arn:aws:secretsmanager:*:*:secret:${ResourcePrefix}-db-secret-*
+                  - arn:aws:ssm:*:*:parameter/${AppName}/endpointGoogleSheet
+                  - arn:aws:rds-db:*:*:dbuser:*
+                  - arn:aws:s3:::mrglambda-code-bucket/*

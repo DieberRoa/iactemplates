@@ -1,0 +1,50 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Security Groups
+
+Parameters:
+  AppName:
+    Type: String
+    Default: "MRGApp"
+  ResourcePrefix:
+    Type: String
+    Default: "MRG"
+  EndpointIp:
+    Type: String
+    Default: "203.0.113.0/24"
+
+Resources:
+  LambdaSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: "Enable Lambda access"
+      VpcId: !Ref VPC
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: !Ref EndpointIp
+      Tags:
+        - Key: Name
+          Value: !Sub "${ResourcePrefix}-lambda-sg"
+        - Key: Creator
+          Value: !Ref AWS::AccountId
+        - Key: App
+          Value: !Ref AppName
+
+  DBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: "Enable Lambda access to RDS"
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 3306
+          ToPort: 3306
+          SourceSecurityGroupId: !Ref LambdaSecurityGroup
+      Tags:
+        - Key: Name
+          Value: !Sub "${ResourcePrefix}-db-sg"
+        - Key: Creator
+          Value: !Ref AWS::AccountId
+        - Key: App
+          Value: !Ref AppName

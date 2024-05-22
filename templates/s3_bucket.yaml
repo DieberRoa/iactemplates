@@ -1,0 +1,23 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: S3 Bucket for Lambda Code
+
+Parameters:
+  AppName:
+    Type: String
+    Default: "MRGApp"
+  ResourcePrefix:
+    Type: String
+    Default: "MRG"
+
+Resources:
+  LambdaCodeBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "${ResourcePrefix}-lambda-code-bucket"
+      Tags:
+        - Key: Name
+          Value: !Sub "${ResourcePrefix}-lambda-code-bucket"
+        - Key: Creator
+          Value: !Ref AWS::AccountId
+        - Key: App
+          Value: !Ref AppName

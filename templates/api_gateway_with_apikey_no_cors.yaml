@@ -1,0 +1,136 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: API Gateway with API Key and no CORS
+
+Parameters:
+  AppName:
+    Type: String
+    Default: "MRGApp"
+  ResourcePrefix:
+    Type: String
+    Default: "MRG"
+
+Resources:
+  ApiGateway:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: !Sub "${ResourcePrefix}-api"
+      Tags:
+        - Key: Name
+          Value: !Sub "${ResourcePrefix}-api"
+        - Key: Creator
+          Value: !Ref AWS::AccountId
+        - Key: App
+          Value: !Ref AppName
+
+  ApiResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      ParentId: !GetAtt ApiGateway.RootResourceId
+      PathPart: "db"
+      RestApiId: !Ref ApiGateway
+      Tags:
+        - Key: Name
+          Value: !Sub "${ResourcePrefix}-api-resource"
+        - Key: Creator
+          Value: !Ref AWS::AccountId
+        - Key: App
+          Value: !Ref AppName
+
+  ApiMethod1:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      AuthorizationType: NONE
+      ApiKeyRequired: true
+      HttpMethod: POST
+      ResourceId: !Ref ApiResource
+      RestApiId: !Ref ApiGateway
+      Integration:
+        IntegrationHttpMethod: POST
+        Type: AWS_PROXY
+        Uri: 
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LambdaExternalEndpoint.Arn}/invocations
+
+  ApiMethod2:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      AuthorizationType: NONE
+      ApiKeyRequired: true
+      HttpMethod: GET
+      ResourceId: !Ref ApiResource
+      RestApiId: !Ref ApiGateway
+      Integration:
+        IntegrationHttpMethod: GET
+        Type: AWS_PROXY
+        Uri: 
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LambdaAccessDB.Arn}/invocations
+
+  ApiKey:
+    Type: AWS::ApiGateway::ApiKey
+    Properties:
+      Enabled: true
+      Name: !Sub "${ResourcePrefix}-api-key"
+      StageKeys:
+        - RestApiId: !Ref ApiGateway
+          StageName: prod
+      Tags:
+        - Key: Name
+          Value: !Sub "${ResourcePrefix}-api-key"
+        - Key: Creator
+          Value: !Ref AWS::AccountId
+        - Key: App
+          Value: !Ref AppName
+
+  UsagePlan:
+    Type: AWS::ApiGateway::UsagePlan
+    Properties:
+      UsagePlanName: !Sub "${ResourcePrefix}-usage-plan"
+      ApiStages:
+        - ApiId: !Ref ApiGateway
+          Stage: prod
+      Throttle:
+        BurstLimit: 100
+        RateLimit: 50
+      Tags:
+        - Key: Name
+          Value: !Sub "${ResourcePrefix}-usage-plan"
+        - Key: Creator
+          Value: !Ref AWS::AccountId
+        - Key: App
+          Value: !Ref AppName
+
+  UsagePlanKey:
+    Type: AWS::ApiGateway::UsagePlanKey
+    Properties:
+      KeyId: !Ref ApiKey
+      KeyType: API_KEY
+      UsagePlanId: !Ref UsagePlan
+
+  LambdaInvokePermissionLambdaExternalEndpoint:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref LambdaExternalEndpoint
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGateway}/*
+      Tags:
+        - Key: Name
+          Value: !Sub "${ResourcePrefix}-lambda-invoke-permission"
+        - Key: Creator
+          Value: !Ref AWS::AccountId
+        - Key: App
+          Value: !Ref AppName
+
+  LambdaInvokePermissionLambdaAccessDB:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref LambdaAccessDB
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGateway}/*
+      Tags:
+        - Key: Name
+          Value: !Sub "${ResourcePrefix}-lambda-invoke-permission"
+        - Key: Creator
+          Value: !Ref AWS::AccountId
+        - Key: App
+          Value: !Ref AppName
