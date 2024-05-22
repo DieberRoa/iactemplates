@@ -1,0 +1,61 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Resources:
+  S3Bucket:
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      BucketName: !Sub '${AWS::StackName}-frontend'
+      AccessControl: Private
+      WebsiteConfiguration:
+        IndexDocument: index.html
+        ErrorDocument: index.html
+
+  OriginAccessIdentity:
+    Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
+    Properties:
+      CloudFrontOriginAccessIdentityConfig:
+        Comment: Access Identity for S3
+
+  S3BucketPolicy:
+    Type: 'AWS::S3::BucketPolicy'
+    Properties:
+      Bucket: !Ref S3Bucket
+      PolicyDocument:
+        Statement:
+          - Action: 's3:GetObject'
+            Effect: Allow
+            Resource: !Sub 'arn:aws:s3:::${S3Bucket}/*'
+            Principal:
+              CanonicalUser: !GetAtt OriginAccessIdentity.S3CanonicalUserId
+
+  CloudFrontDistribution:
+    Type: 'AWS::CloudFront::Distribution'
+    Properties:
+      DistributionConfig:
+        Origins:
+          - Id: S3Origin
+            DomainName: !GetAtt S3Bucket.DomainName
+            S3OriginConfig:
+              OriginAccessIdentity: !Sub 'origin-access-identity/cloudfront/${OriginAccessIdentity}'
+        DefaultCacheBehavior:
+          AllowedMethods:
+            - GET
+            - HEAD
+            - OPTIONS
+          CachedMethods:
+            - GET
+            - HEAD
+          TargetOriginId: S3Origin
+          ViewerProtocolPolicy: 'redirect-to-https'
+          ForwardedValues:
+            QueryString: 'false'
+            Cookies:
+              Forward: 'none'
+        DefaultRootObject: 'index.html'
+        Enabled: 'true'
+        HttpVersion: 'http2'
+        PriceClass: 'PriceClass_All'
+
+Outputs:
+  CloudFrontURL:
+    Value: !GetAtt CloudFrontDistribution.DomainName
+    Description: URL for the CloudFront distribution
