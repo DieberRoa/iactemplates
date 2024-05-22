@@ -1,0 +1,33 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Plantilla principal para crear una distribución de CloudFront con un bucket S3 como origen
+
+Resources:
+  Certificate:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: ./certificate.yaml
+      Parameters:
+        DomainName: example.com  # Reemplaza con tu nombre de dominio real
+        ValidationMethod: DNS 
+
+  S3Bucket:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: ./s3_bucket.yaml
+      Parameters:
+        BucketName: mybucket  # Reemplaza con tu nombre de bucket
+
+  CloudFrontOriginAccessIdentity:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: ./oai.yaml
+
+  CloudFrontDistribution:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: ./distribution.yaml
+      Parameters:
+        S3BucketName: !GetAtt S3Bucket.Outputs.BucketName
+        OriginAccessIdentity: !GetAtt CloudFrontOriginAccessIdentity.Outputs.OriginAccessIdentity
+        AcmCertificateArn: !GetAtt Certificate.Outputs.AcmCertificateArn
+        LoggingBucketName: myloggingbucket  # Reemplaza con tu nombre de bucket de registro

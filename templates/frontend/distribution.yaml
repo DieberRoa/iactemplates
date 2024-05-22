@@ -1,0 +1,49 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Módulo para crear una distribución de CloudFront
+
+Parameters:
+  S3BucketName:
+    Type: String
+  OriginAccessIdentity:
+    Type: String
+  AcmCertificateArn:
+    Type: String
+  LoggingBucketName:
+    Type: String
+
+Resources:
+  CloudFrontDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Origins:
+          - DomainName: !Sub ${S3BucketName}.s3.amazonaws.com
+            Id: !Ref S3BucketName
+            S3OriginConfig:
+              OriginAccessIdentity: !Ref OriginAccessIdentity
+        Enabled: true
+        DefaultCacheBehavior:
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods:
+            - GET
+            - HEAD
+            - OPTIONS
+          CachedMethods:
+            - GET
+            - HEAD
+          ForwardedValues:
+            QueryString: true
+            Cookies:
+              Forward: whitelist
+              WhitelistedNames:
+                - session_id # Ejemplo, personaliza según tu aplicación
+          TargetOriginId: !Ref S3BucketName
+        PriceClass: PriceClass_100 # Verifica si aplica a tu caso
+        ViewerCertificate:
+          AcmCertificateArn: !Ref AcmCertificateArn
+          SslSupportMethod: sni-only
+        DefaultRootObject: index.html
+        Logging:
+          IncludeCookies: false
+          Bucket: !Ref LoggingBucketName
+          Prefix: cloudfront/

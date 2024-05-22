@@ -1,0 +1,22 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Módulo para crear un certificado ACM
+
+Parameters:
+  DomainName:
+    Type: String
+  ValidationMethod:
+    Type: String
+    AllowedValues:
+      - DNS
+      - EMAIL
+
+Resources:
+  Certificate:
+    Type: AWS::CertificateManager::Certificate
+    Properties:
+      DomainName: !Ref DomainName
+      ValidationMethod: !Ref ValidationMethod
+
+Outputs:
+  AcmCertificateArn:
+    Value: !Ref Certificate

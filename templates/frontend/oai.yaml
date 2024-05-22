@@ -1,0 +1,13 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Módulo para crear una identidad de origen (OAI) para CloudFront
+
+Resources:
+  CloudFrontOriginAccessIdentity:
+    Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
+    Properties:
+      CloudFrontOriginAccessIdentityConfig:
+        Comment: Access S3 bucket content only through CloudFront
+
+Outputs:
+  OriginAccessIdentity:
+    Value: !Sub origin-access-identity/cloudfront/${CloudFrontOriginAccessIdentity}
