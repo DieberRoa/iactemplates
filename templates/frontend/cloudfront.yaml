@@ -1,42 +1,57 @@
-AWSTemplateFormatVersion: '2010-09-09'
 Resources:
-  S3Bucket:
-    Type: 'AWS::S3::Bucket'
+  S3Bucket: # Bucket de origen para CloudFront
+    Type: AWS::S3::Bucket
     Properties:
-      BucketName: !Sub '${AWS::StackName}-frontend'
+      BucketName: mybucket  # Reemplaza con tu nombre de bucket
       AccessControl: Private
-      WebsiteConfiguration:
-        IndexDocument: index.html
-        ErrorDocument: index.html
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
 
-  OriginAccessIdentity:
-    Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
-    Properties:
-      CloudFrontOriginAccessIdentityConfig:
-        Comment: Access Identity for S3
-
-  S3BucketPolicy:
-    Type: 'AWS::S3::BucketPolicy'
+  S3BucketPolicy: # Política para permitir acceso desde CloudFront
+    Type: AWS::S3::BucketPolicy
     Properties:
       Bucket: !Ref S3Bucket
       PolicyDocument:
         Statement:
-          - Action: 's3:GetObject'
+          - Action: s3:GetObject
             Effect: Allow
-            Resource: !Sub 'arn:aws:s3:::${S3Bucket}/*'
+            Resource: !Sub arn:aws:s3:::${S3Bucket}/*
             Principal:
-              CanonicalUser: !GetAtt OriginAccessIdentity.S3CanonicalUserId
+              CanonicalUser: !GetAtt CloudFrontOriginAccessIdentity.S3CanonicalUserId
+  
+  Certificate:
+    Type: AWS::CertificateManager::Certificate
+    Properties:
+      DomainName: example.com  # Reemplaza con tu nombre de dominio real
+      ValidationMethod: DNS  # Método de validación (DNS o EMAIL)
+      SubjectAlternativeNames: # (Opcional) Nombres alternativos del sujeto (SANs)
+        - www.example.com
+
+  CloudFrontOriginAccessIdentity: # Identidad de origen para CloudFront
+    Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
+    Properties:
+      CloudFrontOriginAccessIdentityConfig:
+        Comment: Access S3 bucket content only through CloudFront
 
   CloudFrontDistribution:
-    Type: 'AWS::CloudFront::Distribution'
+    Type: AWS::CloudFront::Distribution
     Properties:
       DistributionConfig:
         Origins:
-          - Id: S3Origin
-            DomainName: !GetAtt S3Bucket.DomainName
+          - DomainName: !Sub ${S3Bucket}.s3.amazonaws.com
+            Id: mybucket
             S3OriginConfig:
-              OriginAccessIdentity: !Sub 'origin-access-identity/cloudfront/${OriginAccessIdentity}'
+              OriginAccessIdentity: !Sub origin-access-identity/cloudfront/${CloudFrontOriginAccessIdentity}
+        Enabled: true
         DefaultCacheBehavior:
+          ViewerProtocolPolicy: redirect-to-https
           AllowedMethods:
             - GET
             - HEAD
@@ -44,18 +59,19 @@ Resources:
           CachedMethods:
             - GET
             - HEAD
-          TargetOriginId: S3Origin
-          ViewerProtocolPolicy: 'redirect-to-https'
           ForwardedValues:
-            QueryString: 'false'
+            QueryString: true
             Cookies:
-              Forward: 'none'
-        DefaultRootObject: 'index.html'
-        Enabled: 'true'
-        HttpVersion: 'http2'
-        PriceClass: 'PriceClass_All'
-
-Outputs:
-  CloudFrontURL:
-    Value: !GetAtt CloudFrontDistribution.DomainName
-    Description: URL for the CloudFront distribution
+              Forward: whitelist
+              WhitelistedNames:
+                - session_id # Ejemplo, personaliza según tu aplicación
+          TargetOriginId: mybucket
+        PriceClass: PriceClass_100 # Verifica si aplica a tu caso
+        ViewerCertificate:
+          AcmCertificateArn: !Ref Certificate
+          SslSupportMethod: sni-only
+        DefaultRootObject: index.html
+        Logging:
+          IncludeCookies: false
+          Bucket: myloggingbucket.s3.amazonaws.com
+          Prefix: cloudfront/
