@@ -40,3 +40,24 @@ Resources:
                   - arn:aws:ssm:*:*:parameter/${AppName}/endpointGoogleSheet
                   - arn:aws:rds-db:*:*:dbuser:*
                   - arn:aws:s3:::mrglambda-code-bucket/*
+
+  Resources:
+    DBInstanceReadSecretRole:
+      Type: "AWS::IAM::Role"
+      Properties:
+        AssumeRolePolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: "Allow"
+              Principal:
+                Service: "rds.amazonaws.com"
+              Action: "sts:AssumeRole"
+        Policies:
+          - PolicyName: "AllowSecretsManagerAccess"
+            PolicyDocument:
+              Version: "2012-10-17"
+              Statement:
+                - Effect: "Allow"
+                  Action:
+                    - "secretsmanager:GetSecretValue"
+                  Resource: !Ref DBSecretARN

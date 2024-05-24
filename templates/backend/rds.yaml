@@ -31,12 +31,17 @@ Resources:
       AllocatedStorage: 20
       DBInstanceClass: db.t2.micro
       Engine: mysql
-      MasterUsername: admin
-      MasterUserPassword: admin123
+      MasterUsername: !Sub "{{resolve:secretsmanager:${DBSecretARN}:SecretString:username}}"
+      MasterUserPassword: !Sub "{{resolve:secretsmanager:${DBSecretARN}:SecretString:password}}"
+      EngineVersion: 8.0.28
+      StorageType: gp2
+      MultiAZ: false
+      BackupRetentionPeriod: 1
+      PubliclyAccessible: false
+      AutoMinorVersionUpgrade: true
       VPCSecurityGroups:
         - !Ref DBSecurityGroup
       DBSubnetGroupName: !Ref DBSubnetGroup
-      PubliclyAccessible: false
       Tags:
         - Key: Name
           Value: !Sub "${ResourcePrefix}-rds-instance"
@@ -44,3 +49,4 @@ Resources:
           Value: !Ref AWS::AccountId
         - Key: App
           Value: !Ref AppName
+      RoleArn: !GetAtt DBInstanceReadSecretRole.Arn
