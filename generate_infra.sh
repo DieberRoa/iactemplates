@@ -2,11 +2,11 @@
 
 # Directorio de salida
 OUTPUT_DIR="output"
-TEMPLATE_DIR="templates"  # Directorio donde se almacenan las plantillas
+TEMPLATE_DIR="templates/backend"  # Directorio donde se almacenan las plantillas
 
 # Nombres y prefijos personalizados
-APP_NAME="DemoAPP"
-RESOURCE_PREFIX="dma"
+APP_NAME="MRGamingBackend"
+RESOURCE_PREFIX="MGB"
 
 # Crear el directorio de salida si no existe
 mkdir -p "$OUTPUT_DIR"

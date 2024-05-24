@@ -1,0 +1,474 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Plantilla de CloudFormation para crear la infraestructura de la aplicación
+
+Parameters:
+  VpcCidr:
+    Type: String
+    Default: 10.0.0.0/16
+  PublicSubnetCidr:
+    Type: String
+    Default: 10.0.1.0/24
+  PrivateSubnetCidr:
+    Type: String
+    Default: 10.0.2.0/24
+  AppName:
+    Type: String
+    Default: MRGamingBackend
+  ResourcePrefix:
+    Type: String
+    Default: MGB
+  EndpointIp:
+    Type: String
+    Default: 203.0.113.0/24
+
+Resources:
+  # api_gateway_with_apikey_no_cors.yaml
+  ApiGateway:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: !Sub ${ResourcePrefix}-api
+      Tags:
+        - Key: Name
+          Value: !Sub ${ResourcePrefix}-api
+        - Key: Creator
+          Value: !Ref AWS::AccountId
+        - Key: App
+          Value: !Ref AppName
+
+  ApiResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      ParentId: !GetAtt ApiGateway.RootResourceId
+      PathPart: db
+      RestApiId: !Ref ApiGateway
+      Tags:
+        - Key: Name
+          Value: !Sub ${ResourcePrefix}-api-resource
+        - Key: Creator
+          Value: !Ref AWS::AccountId
+        - Key: App
+          Value: !Ref AppName
+
+  ApiMethod1:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      AuthorizationType: NONE
+      ApiKeyRequired: true
+      HttpMethod: POST
+      ResourceId: !Ref ApiResource
+      RestApiId: !Ref ApiGateway
+      Integration:
+        IntegrationHttpMethod: POST
+        Type: AWS_PROXY
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LambdaExternalEndpoint.Arn}/invocations
+
+  ApiMethod2:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      AuthorizationType: NONE
+      ApiKeyRequired: true
+      HttpMethod: GET
+      ResourceId: !Ref ApiResource
+      RestApiId: !Ref ApiGateway
+      Integration:
+        IntegrationHttpMethod: GET
+        Type: AWS_PROXY
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LambdaAccessDB.Arn}/invocations
+
+  ApiKey:
+    Type: AWS::ApiGateway::ApiKey
+    Properties:
+      Enabled: true
+      Name: !Sub ${ResourcePrefix}-api-key
+      StageKeys:
+        - RestApiId: !Ref ApiGateway
+          StageName: prod
+      Tags:
+        - Key: Name
+          Value: !Sub ${ResourcePrefix}-api-key
+        - Key: Creator
+          Value: !Ref AWS::AccountId
+        - Key: App
+          Value: !Ref AppName
+
+  UsagePlan:
+    Type: AWS::ApiGateway::UsagePlan
+    Properties:
+      UsagePlanName: !Sub ${ResourcePrefix}-usage-plan
+      ApiStages:
+        - ApiId: !Ref ApiGateway
+          Stage: prod
+      Throttle:
+        BurstLimit: 100
+        RateLimit: 50
+      Tags:
+        - Key: Name
+          Value: !Sub ${ResourcePrefix}-usage-plan
+        - Key: Creator
+          Value: !Ref AWS::AccountId
+        - Key: App
+          Value: !Ref AppName
+
+  UsagePlanKey:
+    Type: AWS::ApiGateway::UsagePlanKey
+    Properties:
+      KeyId: !Ref ApiKey
+      KeyType: API_KEY
+      UsagePlanId: !Ref UsagePlan
+
+  LambdaInvokePermissionLambdaExternalEndpoint:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref LambdaExternalEndpoint
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGateway}/*
+      Tags:
+        - Key: Name
+          Value: !Sub ${ResourcePrefix}-lambda-invoke-permission
+        - Key: Creator
+          Value: !Ref AWS::AccountId
+        - Key: App
+          Value: !Ref AppName
+
+  LambdaInvokePermissionLambdaAccessDB:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref LambdaAccessDB
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGateway}/*
+      Tags:
+        - Key: Name
+          Value: !Sub ${ResourcePrefix}-lambda-invoke-permission
+        - Key: Creator
+          Value: !Ref AWS::AccountId
+        - Key: App
+          Value: !Ref AppName
+
+  # gateways_routes.yaml
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub ${ResourcePrefix}-igw
+        - Key: Creator
+          Value: !Ref AWS::AccountId
+        - Key: App
+          Value: !Ref AppName
+
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${ResourcePrefix}-public-rt
+        - Key: Creator
+          Value: !Ref AWS::AccountId
+        - Key: App
+          Value: !Ref AppName
+
+  PublicRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet
+      RouteTableId: !Ref PublicRouteTable
+
+  NatGatewayEIP:
+    Type: AWS::EC2::EIP
+
+  NatGateway:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NatGatewayEIP.AllocationId
+      SubnetId: !Ref PublicSubnet
+
+  PrivateRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${ResourcePrefix}-private-rt
+        - Key: Creator
+          Value: !Ref AWS::AccountId
+        - Key: App
+          Value: !Ref AppName
+
+  PrivateRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway
+
+  PrivateSubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnet
+      RouteTableId: !Ref PrivateRouteTable
+
+  # iam_roles.yaml
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: LambdaExecutionPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                  - secretsmanager:GetSecretValue
+                  - rds-db:connect
+                  - ssm:GetParameter
+                  - s3:GetObject
+                Resource:
+                  - arn:aws:logs:*:*:*
+                  - arn:aws:secretsmanager:*:*:secret:${ResourcePrefix}-db-secret-*
+                  - arn:aws:ssm:*:*:parameter/${AppName}/endpointGoogleSheet
+                  - arn:aws:rds-db:*:*:dbuser:*
+                  - arn:aws:s3:::mrglambda-code-bucket/*
+
+  # lambdas_accessdb.yaml
+  LambdaAccessDB:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Code:
+        S3Bucket: !Sub ${ResourcePrefix}-lambda-code-bucket
+        S3Key: access_db_lambda.zip
+      Runtime: nodejs14.x
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+        SubnetIds:
+          - !Ref PrivateSubnet
+      Environment:
+        Variables:
+          DB_SECRET_ARN: !Ref DBSecret.Arn
+          PARAMETER_ARN: !Ref ParameterStore.Arn
+      Tags:
+        - Key: Name
+          Value: !Sub ${ResourcePrefix}-access-db-lambda
+        - Key: Creator
+          Value: !Ref AWS::AccountId
+        - Key: App
+          Value: !Ref AppName
+
+  # lambdas_external.yaml
+  LambdaExternalEndpoint:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Code:
+        S3Bucket: !Sub ${ResourcePrefix}-lambda-code-bucket
+        S3Key: external_endpoint_lambda.zip
+      Runtime: nodejs14.x
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+        SubnetIds:
+          - !Ref PublicSubnet
+      Environment:
+        Variables:
+          ENDPOINT_IP: !Ref EndpointIp
+      Tags:
+        - Key: Name
+          Value: !Sub ${ResourcePrefix}-external-endpoint-lambda
+        - Key: Creator
+          Value: !Ref AWS::AccountId
+        - Key: App
+          Value: !Ref AppName
+
+  # parameter_store.yaml
+  ParameterStore:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /${AppName}/endpointGoogleSheet
+      Type: String
+      Value: https://sheets.googleapis.com/v4/spreadsheets/your-google-sheet-id
+      Tags:
+        - Key: Name
+          Value: !Sub ${ResourcePrefix}-endpointGoogleSheet
+        - Key: Creator
+          Value: !Ref AWS::AccountId
+        - Key: App
+          Value: !Ref AppName
+
+  # rds.yaml
+  DBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Subnet group for RDS instance
+      SubnetIds:
+        - !Ref PrivateSubnet
+      Tags:
+        - Key: Name
+          Value: !Sub ${ResourcePrefix}-db-subnet-group
+        - Key: Creator
+          Value: !Ref AWS::AccountId
+        - Key: App
+          Value: !Ref AppName
+
+  RDSInstance:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBInstanceIdentifier: !Sub ${ResourcePrefix}-rds-instance
+      AllocatedStorage: 20
+      DBInstanceClass: db.t2.micro
+      Engine: mysql
+      MasterUsername: admin
+      MasterUserPassword: admin123
+      VPCSecurityGroups:
+        - !Ref DBSecurityGroup
+      DBSubnetGroupName: !Ref DBSubnetGroup
+      PubliclyAccessible: false
+      Tags:
+        - Key: Name
+          Value: !Sub ${ResourcePrefix}-rds-instance
+        - Key: Creator
+          Value: !Ref AWS::AccountId
+        - Key: App
+          Value: !Ref AppName
+
+  # s3_bucket.yaml
+  LambdaCodeBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub ${ResourcePrefix}-lambda-code-bucket
+      Tags:
+        - Key: Name
+          Value: !Sub ${ResourcePrefix}-lambda-code-bucket
+        - Key: Creator
+          Value: !Ref AWS::AccountId
+        - Key: App
+          Value: !Ref AppName
+
+  # secrets_manager.yaml
+  DBSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub ${ResourcePrefix}-db-secret
+      SecretString: !Sub |
+        {
+          "username": "admin",
+          "password": "admin123",
+          "engine": "mysql",
+          "host": "${RDSInstance.Endpoint.Address}",
+          "port": "${RDSInstance.Endpoint.Port}",
+          "dbname": "mydatabase"
+        }
+      Tags:
+        - Key: Name
+          Value: !Sub ${ResourcePrefix}-db-secret
+        - Key: Creator
+          Value: !Ref AWS::AccountId
+        - Key: App
+          Value: !Ref AppName
+
+  # security_groups.yaml
+  LambdaSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable Lambda access
+      VpcId: !Ref VPC
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: !Ref EndpointIp
+      Tags:
+        - Key: Name
+          Value: !Sub ${ResourcePrefix}-lambda-sg
+        - Key: Creator
+          Value: !Ref AWS::AccountId
+        - Key: App
+          Value: !Ref AppName
+
+  DBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable Lambda access to RDS
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 3306
+          ToPort: 3306
+          SourceSecurityGroupId: !Ref LambdaSecurityGroup
+      Tags:
+        - Key: Name
+          Value: !Sub ${ResourcePrefix}-db-sg
+        - Key: Creator
+          Value: !Ref AWS::AccountId
+        - Key: App
+          Value: !Ref AppName
+
+  # vpc_subnets.yaml
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCidr
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${ResourcePrefix}-vpc
+        - Key: Creator
+          Value: !Ref AWS::AccountId
+        - Key: App
+          Value: !Ref AppName
+
+  PublicSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref PublicSubnetCidr
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${ResourcePrefix}-public-subnet
+        - Key: Creator
+          Value: !Ref AWS::AccountId
+        - Key: App
+          Value: !Ref AppName
+
+  PrivateSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref PrivateSubnetCidr
+      Tags:
+        - Key: Name
+          Value: !Sub ${ResourcePrefix}-private-subnet
+        - Key: Creator
+          Value: !Ref AWS::AccountId
+        - Key: App
+          Value: !Ref AppName
