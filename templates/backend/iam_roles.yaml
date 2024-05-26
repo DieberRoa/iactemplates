@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: IAM Roles
+Description: IAM Roles (Granular)
 
 Parameters:
   AppName:
@@ -10,7 +10,8 @@ Parameters:
     Default: "MRG"
 
 Resources:
-  LambdaExecutionRole:
+  # Rol para escritura en CloudWatch Logs
+  LambdaCloudWatchLogsRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -21,7 +22,7 @@ Resources:
               Service: lambda.amazonaws.com
             Action: sts:AssumeRole
       Policies:
-        - PolicyName: LambdaExecutionPolicy
+        - PolicyName: LambdaCloudWatchLogsPolicy
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
@@ -30,16 +31,95 @@ Resources:
                   - logs:CreateLogGroup
                   - logs:CreateLogStream
                   - logs:PutLogEvents
+                Resource: "*" # Permiso para todos los logs
+
+  # Rol para lectura de Secrets Manager
+  LambdaSecretsManagerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: LambdaSecretsManagerPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
                   - secretsmanager:GetSecretValue
-                  - rds-db:connect
-                  - ssm:GetParameter
-                  - s3:GetObject
                 Resource: 
-                  - arn:aws:logs:*:*:*
                   - arn:aws:secretsmanager:*:*:secret:${ResourcePrefix}-db-secret-*
+
+  # Rol para lectura de parámetros de SSM
+  LambdaSSMRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: LambdaSSMPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ssm:GetParameter
+                Resource:
                   - arn:aws:ssm:*:*:parameter/${AppName}/endpointGoogleSheet
-                  - arn:aws:rds-db:*:*:dbuser:*
+
+  # Rol para lectura de S3
+  LambdaS3Role:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: LambdaS3Policy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                Resource:
                   - arn:aws:s3:::mrglambda-code-bucket/*
+
+  # Rol para conexión a RDS (sin cambios)
+  LambdaRDSRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: LambdaRDSPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - rds-db:connect
+                Resource:
+                  - arn:aws:rds-db:*:*:dbuser:*
 
   Resources:
     DBInstanceReadSecretRole:

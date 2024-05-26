@@ -16,7 +16,7 @@ Resources:
     Type: AWS::Lambda::Function
     Properties:
       Handler: index.handler
-      Role: !GetAtt LambdaExecutionRole.Arn
+      Role: !GetAtt LambdaCloudWatchLogsRole.Arn, !GetAtt LambdaSecretsManagerRole.Arn, !GetAtt LambdaS3Role.Arn, !GetAtt LambdaRDSRole.Arn , !GetAtt DBInstanceReadSecretRole.Arn
       Code:
         S3Bucket: !Sub "${ResourcePrefix}-lambda-code-bucket"
         S3Key: access_db_lambda.zip
