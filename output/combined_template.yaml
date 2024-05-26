@@ -4,32 +4,32 @@ Description: Plantilla de CloudFormation para crear la infraestructura de la apl
 Parameters:
   VpcCidr:
     Type: String
-    Default: 10.0.0.0/16
+    Default: "10.0.0.0/16"
   PublicSubnetCidr:
     Type: String
-    Default: 10.0.1.0/24
+    Default: "10.0.1.0/24"
   PrivateSubnetCidr:
     Type: String
-    Default: 10.0.2.0/24
+    Default: "10.0.2.0/24"
   AppName:
     Type: String
-    Default: MRGamingBackend
+    Default: "MRGamingBackend"
   ResourcePrefix:
     Type: String
-    Default: MGB
+    Default: "MGB"
   EndpointIp:
     Type: String
-    Default: 203.0.113.0/24
+    Default: "203.0.113.0/24"
 
 Resources:
-  # api_gateway_with_apikey_no_cors.yaml
+# api_gateway_with_apikey_no_cors.yaml
   ApiGateway:
     Type: AWS::ApiGateway::RestApi
     Properties:
-      Name: !Sub ${ResourcePrefix}-api
+      Name: !Sub "${ResourcePrefix}-api"
       Tags:
         - Key: Name
-          Value: !Sub ${ResourcePrefix}-api
+          Value: !Sub "${ResourcePrefix}-api"
         - Key: Creator
           Value: !Ref AWS::AccountId
         - Key: App
@@ -39,11 +39,11 @@ Resources:
     Type: AWS::ApiGateway::Resource
     Properties:
       ParentId: !GetAtt ApiGateway.RootResourceId
-      PathPart: db
+      PathPart: "db"
       RestApiId: !Ref ApiGateway
       Tags:
         - Key: Name
-          Value: !Sub ${ResourcePrefix}-api-resource
+          Value: !Sub "${ResourcePrefix}-api-resource"
         - Key: Creator
           Value: !Ref AWS::AccountId
         - Key: App
@@ -60,7 +60,8 @@ Resources:
       Integration:
         IntegrationHttpMethod: POST
         Type: AWS_PROXY
-        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LambdaExternalEndpoint.Arn}/invocations
+        Uri: 
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LambdaExternalEndpoint.Arn}/invocations
 
   ApiMethod2:
     Type: AWS::ApiGateway::Method
@@ -73,19 +74,20 @@ Resources:
       Integration:
         IntegrationHttpMethod: GET
         Type: AWS_PROXY
-        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LambdaAccessDB.Arn}/invocations
+        Uri: 
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LambdaAccessDB.Arn}/invocations
 
   ApiKey:
     Type: AWS::ApiGateway::ApiKey
     Properties:
       Enabled: true
-      Name: !Sub ${ResourcePrefix}-api-key
+      Name: !Sub "${ResourcePrefix}-api-key"
       StageKeys:
         - RestApiId: !Ref ApiGateway
           StageName: prod
       Tags:
         - Key: Name
-          Value: !Sub ${ResourcePrefix}-api-key
+          Value: !Sub "${ResourcePrefix}-api-key"
         - Key: Creator
           Value: !Ref AWS::AccountId
         - Key: App
@@ -94,7 +96,7 @@ Resources:
   UsagePlan:
     Type: AWS::ApiGateway::UsagePlan
     Properties:
-      UsagePlanName: !Sub ${ResourcePrefix}-usage-plan
+      UsagePlanName: !Sub "${ResourcePrefix}-usage-plan"
       ApiStages:
         - ApiId: !Ref ApiGateway
           Stage: prod
@@ -103,7 +105,7 @@ Resources:
         RateLimit: 50
       Tags:
         - Key: Name
-          Value: !Sub ${ResourcePrefix}-usage-plan
+          Value: !Sub "${ResourcePrefix}-usage-plan"
         - Key: Creator
           Value: !Ref AWS::AccountId
         - Key: App
@@ -125,7 +127,7 @@ Resources:
       SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGateway}/*
       Tags:
         - Key: Name
-          Value: !Sub ${ResourcePrefix}-lambda-invoke-permission
+          Value: !Sub "${ResourcePrefix}-lambda-invoke-permission"
         - Key: Creator
           Value: !Ref AWS::AccountId
         - Key: App
@@ -140,19 +142,19 @@ Resources:
       SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGateway}/*
       Tags:
         - Key: Name
-          Value: !Sub ${ResourcePrefix}-lambda-invoke-permission
+          Value: !Sub "${ResourcePrefix}-lambda-invoke-permission"
         - Key: Creator
           Value: !Ref AWS::AccountId
         - Key: App
           Value: !Ref AppName
 
-  # gateways_routes.yaml
+# gateways_routes.yaml
   InternetGateway:
     Type: AWS::EC2::InternetGateway
     Properties:
       Tags:
         - Key: Name
-          Value: !Sub ${ResourcePrefix}-igw
+          Value: !Sub "${ResourcePrefix}-igw"
         - Key: Creator
           Value: !Ref AWS::AccountId
         - Key: App
@@ -170,7 +172,7 @@ Resources:
       VpcId: !Ref VPC
       Tags:
         - Key: Name
-          Value: !Sub ${ResourcePrefix}-public-rt
+          Value: !Sub "${ResourcePrefix}-public-rt"
         - Key: Creator
           Value: !Ref AWS::AccountId
         - Key: App
@@ -204,7 +206,7 @@ Resources:
       VpcId: !Ref VPC
       Tags:
         - Key: Name
-          Value: !Sub ${ResourcePrefix}-private-rt
+          Value: !Sub "${ResourcePrefix}-private-rt"
         - Key: Creator
           Value: !Ref AWS::AccountId
         - Key: App
@@ -223,8 +225,9 @@ Resources:
       SubnetId: !Ref PrivateSubnet
       RouteTableId: !Ref PrivateRouteTable
 
-  # iam_roles.yaml
-  LambdaExecutionRole:
+# iam_roles.yaml
+  # Rol para escritura en CloudWatch Logs
+  LambdaCloudWatchLogsRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -235,7 +238,7 @@ Resources:
               Service: lambda.amazonaws.com
             Action: sts:AssumeRole
       Policies:
-        - PolicyName: LambdaExecutionPolicy
+        - PolicyName: LambdaCloudWatchLogsPolicy
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
@@ -244,27 +247,127 @@ Resources:
                   - logs:CreateLogGroup
                   - logs:CreateLogStream
                   - logs:PutLogEvents
+                Resource: "*" # Permiso para todos los logs
+
+  # Rol para lectura de Secrets Manager
+  LambdaSecretsManagerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: LambdaSecretsManagerPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
                   - secretsmanager:GetSecretValue
-                  - rds-db:connect
+                Resource: 
+                  - arn:aws:secretsmanager:*:*:secret:${ResourcePrefix}-db-secret-*
+
+  # Rol para lectura de parámetros de SSM
+  LambdaSSMRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: LambdaSSMPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
                   - ssm:GetParameter
+                Resource:
+                  - arn:aws:ssm:*:*:parameter/${AppName}/endpointGoogleSheet
+
+  # Rol para lectura de S3
+  LambdaS3Role:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: LambdaS3Policy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
                   - s3:GetObject
                 Resource:
-                  - arn:aws:logs:*:*:*
-                  - arn:aws:secretsmanager:*:*:secret:${ResourcePrefix}-db-secret-*
-                  - arn:aws:ssm:*:*:parameter/${AppName}/endpointGoogleSheet
-                  - arn:aws:rds-db:*:*:dbuser:*
                   - arn:aws:s3:::mrglambda-code-bucket/*
 
-  # lambdas_accessdb.yaml
+  # Rol para conexión a RDS (sin cambios)
+  LambdaRDSRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: LambdaRDSPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - rds-db:connect
+                Resource:
+                  - arn:aws:rds-db:*:*:dbuser:*
+
+  LambdaReadSecretRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service: "rds.amazonaws.com"
+            Action: "sts:AssumeRole"
+      Policies:
+        - PolicyName: "AllowSecretsManagerAccess"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action:
+                  - "secretsmanager:GetSecretValue"
+                Resource: 
+                  - "arn:aws:secretsmanager:*:*:secret:${ResourcePrefix}-db-secret-*"
+
+# lambdas_accessdb.yaml
   LambdaAccessDB:
     Type: AWS::Lambda::Function
     Properties:
       Handler: index.handler
-      Role: !GetAtt LambdaExecutionRole.Arn
+      Role: !GetAtt LambdaCloudWatchLogsRole.Arn, !GetAtt LambdaSecretsManagerRole.Arn, !GetAtt LambdaS3Role.Arn, !GetAtt LambdaRDSRole.Arn , !GetAtt LambdaReadSecretRole.Arn
       Code:
-        S3Bucket: !Sub ${ResourcePrefix}-lambda-code-bucket
+        S3Bucket: !Sub "${ResourcePrefix}-lambda-code-bucket"
         S3Key: access_db_lambda.zip
-      Runtime: nodejs14.x
+      Runtime: nodejs18.x
       VpcConfig:
         SecurityGroupIds:
           - !Ref LambdaSecurityGroup
@@ -272,26 +375,25 @@ Resources:
           - !Ref PrivateSubnet
       Environment:
         Variables:
-          DB_SECRET_ARN: !Ref DBSecret.Arn
-          PARAMETER_ARN: !Ref ParameterStore.Arn
+          DB_SECRET_ARN: !ImportValue "arn:aws:secretsmanager:*:*:secret:${ResourcePrefix}-db-secret-*"
       Tags:
         - Key: Name
-          Value: !Sub ${ResourcePrefix}-access-db-lambda
+          Value: !Sub "${ResourcePrefix}-access-db-lambda"
         - Key: Creator
           Value: !Ref AWS::AccountId
         - Key: App
           Value: !Ref AppName
 
-  # lambdas_external.yaml
+# lambdas_external.yaml
   LambdaExternalEndpoint:
     Type: AWS::Lambda::Function
     Properties:
       Handler: index.handler
-      Role: !GetAtt LambdaExecutionRole.Arn
+      Role: !GetAtt LambdaCloudWatchLogsRole.Arn, !GetAtt LambdaSecretsManagerRole.Arn, !GetAtt LambdaSSMRole.Arn, !GetAtt LambdaS3Role.Arn, !GetAtt LambdaRDSRole.Arn , !GetAtt LambdaReadSecretRole.Arn
       Code:
-        S3Bucket: !Sub ${ResourcePrefix}-lambda-code-bucket
+        S3Bucket: !Sub "${ResourcePrefix}-lambda-code-bucket"
         S3Key: external_endpoint_lambda.zip
-      Runtime: nodejs14.x
+      Runtime: nodejs18.x
       VpcConfig:
         SecurityGroupIds:
           - !Ref LambdaSecurityGroup
@@ -302,37 +404,37 @@ Resources:
           ENDPOINT_IP: !Ref EndpointIp
       Tags:
         - Key: Name
-          Value: !Sub ${ResourcePrefix}-external-endpoint-lambda
+          Value: !Sub "${ResourcePrefix}-external-endpoint-lambda"
         - Key: Creator
           Value: !Ref AWS::AccountId
         - Key: App
           Value: !Ref AppName
 
-  # parameter_store.yaml
+# parameter_store.yaml
   ParameterStore:
     Type: AWS::SSM::Parameter
     Properties:
-      Name: !Sub /${AppName}/endpointGoogleSheet
+      Name: !Sub "/${AppName}/endpointGoogleSheet"
       Type: String
-      Value: https://sheets.googleapis.com/v4/spreadsheets/your-google-sheet-id
+      Value: "https://sheets.googleapis.com/v4/spreadsheets/your-google-sheet-id"
       Tags:
         - Key: Name
-          Value: !Sub ${ResourcePrefix}-endpointGoogleSheet
+          Value: !Sub "${ResourcePrefix}-endpointGoogleSheet"
         - Key: Creator
           Value: !Ref AWS::AccountId
         - Key: App
           Value: !Ref AppName
 
-  # rds.yaml
+# rds.yaml
   DBSubnetGroup:
     Type: AWS::RDS::DBSubnetGroup
     Properties:
-      DBSubnetGroupDescription: Subnet group for RDS instance
+      DBSubnetGroupDescription: "Subnet group for RDS instance"
       SubnetIds:
         - !Ref PrivateSubnet
       Tags:
         - Key: Name
-          Value: !Sub ${ResourcePrefix}-db-subnet-group
+          Value: !Sub "${ResourcePrefix}-db-subnet-group"
         - Key: Creator
           Value: !Ref AWS::AccountId
         - Key: App
@@ -341,64 +443,66 @@ Resources:
   RDSInstance:
     Type: AWS::RDS::DBInstance
     Properties:
-      DBInstanceIdentifier: !Sub ${ResourcePrefix}-rds-instance
+      DBInstanceIdentifier: !Sub "${ResourcePrefix}-rds-instance"
       AllocatedStorage: 20
       DBInstanceClass: db.t2.micro
       Engine: mysql
-      MasterUsername: admin
-      MasterUserPassword: admin123
+      MasterUsername: !Sub "{{resolve:secretsmanager:${DBSecret.Arn}:SecretString:username}}"
+      MasterUserPassword: !Sub "{{resolve:secretsmanager:${DBSecret.Arn}:SecretString:password}}"
+      EngineVersion: 8.0.28
+      StorageType: gp2
+      MultiAZ: false
+      BackupRetentionPeriod: 1
+      PubliclyAccessible: false
+      AutoMinorVersionUpgrade: true
       VPCSecurityGroups:
         - !Ref DBSecurityGroup
       DBSubnetGroupName: !Ref DBSubnetGroup
-      PubliclyAccessible: false
       Tags:
         - Key: Name
-          Value: !Sub ${ResourcePrefix}-rds-instance
+          Value: !Sub "${ResourcePrefix}-rds-instance"
         - Key: Creator
           Value: !Ref AWS::AccountId
         - Key: App
           Value: !Ref AppName
+      RoleArn: !GetAtt LambdaReadSecretRole.Arn
 
-  # s3_bucket.yaml
+# s3_bucket.yaml
   LambdaCodeBucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: !Sub ${ResourcePrefix}-lambda-code-bucket
+      BucketName: !Sub "${ResourcePrefix}-lambda-code-bucket"
       Tags:
         - Key: Name
-          Value: !Sub ${ResourcePrefix}-lambda-code-bucket
+          Value: !Sub "${ResourcePrefix}-lambda-code-bucket"
         - Key: Creator
           Value: !Ref AWS::AccountId
         - Key: App
           Value: !Ref AppName
 
-  # secrets_manager.yaml
+# secrets_manager.yaml
   DBSecret:
     Type: AWS::SecretsManager::Secret
     Properties:
-      Name: !Sub ${ResourcePrefix}-db-secret
+      Name: !Sub "${ResourcePrefix}-db-secret"
       SecretString: !Sub |
         {
           "username": "admin",
-          "password": "admin123",
-          "engine": "mysql",
-          "host": "${RDSInstance.Endpoint.Address}",
-          "port": "${RDSInstance.Endpoint.Port}",
-          "dbname": "mydatabase"
+          "password": "p4ssg0rd.1987.))",
         }
       Tags:
         - Key: Name
-          Value: !Sub ${ResourcePrefix}-db-secret
+          Value: !Sub "${ResourcePrefix}-db-secret"
         - Key: Creator
           Value: !Ref AWS::AccountId
         - Key: App
           Value: !Ref AppName
 
-  # security_groups.yaml
+# security_groups.yaml
   LambdaSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Enable Lambda access
+      GroupDescription: "Enable Lambda access"
       VpcId: !Ref VPC
       SecurityGroupEgress:
         - IpProtocol: tcp
@@ -407,7 +511,7 @@ Resources:
           CidrIp: !Ref EndpointIp
       Tags:
         - Key: Name
-          Value: !Sub ${ResourcePrefix}-lambda-sg
+          Value: !Sub "${ResourcePrefix}-lambda-sg"
         - Key: Creator
           Value: !Ref AWS::AccountId
         - Key: App
@@ -416,7 +520,7 @@ Resources:
   DBSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Enable Lambda access to RDS
+      GroupDescription: "Enable Lambda access to RDS"
       VpcId: !Ref VPC
       SecurityGroupIngress:
         - IpProtocol: tcp
@@ -425,13 +529,13 @@ Resources:
           SourceSecurityGroupId: !Ref LambdaSecurityGroup
       Tags:
         - Key: Name
-          Value: !Sub ${ResourcePrefix}-db-sg
+          Value: !Sub "${ResourcePrefix}-db-sg"
         - Key: Creator
           Value: !Ref AWS::AccountId
         - Key: App
           Value: !Ref AppName
 
-  # vpc_subnets.yaml
+# vpc_subnets.yaml
   VPC:
     Type: AWS::EC2::VPC
     Properties:
@@ -440,7 +544,7 @@ Resources:
       EnableDnsHostnames: true
       Tags:
         - Key: Name
-          Value: !Sub ${ResourcePrefix}-vpc
+          Value: !Sub "${ResourcePrefix}-vpc"
         - Key: Creator
           Value: !Ref AWS::AccountId
         - Key: App
@@ -454,7 +558,7 @@ Resources:
       MapPublicIpOnLaunch: true
       Tags:
         - Key: Name
-          Value: !Sub ${ResourcePrefix}-public-subnet
+          Value: !Sub "${ResourcePrefix}-public-subnet"
         - Key: Creator
           Value: !Ref AWS::AccountId
         - Key: App
@@ -467,8 +571,10 @@ Resources:
       CidrBlock: !Ref PrivateSubnetCidr
       Tags:
         - Key: Name
-          Value: !Sub ${ResourcePrefix}-private-subnet
+          Value: !Sub "${ResourcePrefix}-private-subnet"
         - Key: Creator
           Value: !Ref AWS::AccountId
         - Key: App
           Value: !Ref AppName
+
+
