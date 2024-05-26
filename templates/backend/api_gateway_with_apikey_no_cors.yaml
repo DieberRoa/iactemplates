@@ -8,6 +8,9 @@ Parameters:
   ResourcePrefix:
     Type: String
     Default: "MRG"
+  Environment:
+    Type: String
+    Default: "ENV"
 
 Resources:
   ApiGateway:
@@ -21,7 +24,9 @@ Resources:
           Value: !Ref AWS::AccountId
         - Key: App
           Value: !Ref AppName
-
+        - Key: Environment
+          Value: !Ref Environment   
+          
   ApiResource:
     Type: AWS::ApiGateway::Resource
     Properties:
@@ -35,6 +40,8 @@ Resources:
           Value: !Ref AWS::AccountId
         - Key: App
           Value: !Ref AppName
+        - Key: Environment
+          Value: !Ref Environment
 
   ApiMethod1:
     Type: AWS::ApiGateway::Method
@@ -79,6 +86,8 @@ Resources:
           Value: !Ref AWS::AccountId
         - Key: App
           Value: !Ref AppName
+        - Key: Environment
+          Value: !Ref Environment         
 
   UsagePlan:
     Type: AWS::ApiGateway::UsagePlan
@@ -97,6 +106,8 @@ Resources:
           Value: !Ref AWS::AccountId
         - Key: App
           Value: !Ref AppName
+        - Key: Environment
+          Value: !Ref Environment  
 
   UsagePlanKey:
     Type: AWS::ApiGateway::UsagePlanKey
@@ -119,6 +130,8 @@ Resources:
           Value: !Ref AWS::AccountId
         - Key: App
           Value: !Ref AppName
+        - Key: Environment
+          Value: !Ref Environment  
 
   LambdaInvokePermissionLambdaAccessDB:
     Type: AWS::Lambda::Permission
@@ -134,3 +147,5 @@ Resources:
           Value: !Ref AWS::AccountId
         - Key: App
           Value: !Ref AppName
+        - Key: Environment
+          Value: !Ref Environment  

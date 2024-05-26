@@ -8,6 +8,9 @@ Parameters:
   ResourcePrefix:
     Type: String
     Default: "MRG"
+  Environment:
+    Type: String
+    Default: "ENV"
   EndpointIp:
     Type: String
     Default: "203.0.113.0/24"
@@ -17,7 +20,7 @@ Resources:
     Type: AWS::Lambda::Function
     Properties:
       Handler: index.handler
-      Role: !GetAtt LambdaCloudWatchLogsRole.Arn, !GetAtt LambdaSecretsManagerRole.Arn, !GetAtt LambdaSSMRole.Arn, !GetAtt LambdaS3Role.Arn, !GetAtt LambdaRDSRole.Arn , !GetAtt DBInstanceReadSecretRole.Arn
+      Role: !GetAtt LambdaCloudWatchLogsRole.Arn, !GetAtt LambdaSecretsManagerRole.Arn, !GetAtt LambdaSSMRole.Arn, !GetAtt LambdaS3Role.Arn, !GetAtt LambdaRDSRole.Arn , !GetAtt LambdaReadSecretRole.Arn
       Code:
         S3Bucket: !Sub "${ResourcePrefix}-lambda-code-bucket"
         S3Key: external_endpoint_lambda.zip
@@ -37,5 +40,6 @@ Resources:
           Value: !Ref AWS::AccountId
         - Key: App
           Value: !Ref AppName
-
+        - Key: Environment
+          Value: !Ref Environment
 

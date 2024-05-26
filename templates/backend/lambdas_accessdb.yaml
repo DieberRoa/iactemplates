@@ -8,15 +8,17 @@ Parameters:
   ResourcePrefix:
     Type: String
     Default: "MRG"
-  DBSecretArn:
+  Environment:
     Type: String
+    Default: "ENV"
+
 
 Resources:
   LambdaAccessDB:
     Type: AWS::Lambda::Function
     Properties:
       Handler: index.handler
-      Role: !GetAtt LambdaCloudWatchLogsRole.Arn, !GetAtt LambdaSecretsManagerRole.Arn, !GetAtt LambdaS3Role.Arn, !GetAtt LambdaRDSRole.Arn , !GetAtt DBInstanceReadSecretRole.Arn
+      Role: !GetAtt LambdaCloudWatchLogsRole.Arn, !GetAtt LambdaSecretsManagerRole.Arn, !GetAtt LambdaS3Role.Arn, !GetAtt LambdaRDSRole.Arn , !GetAtt LambdaReadSecretRole.Arn
       Code:
         S3Bucket: !Sub "${ResourcePrefix}-lambda-code-bucket"
         S3Key: access_db_lambda.zip
@@ -28,8 +30,7 @@ Resources:
           - !Ref PrivateSubnet
       Environment:
         Variables:
-          DB_SECRET_ARN: !Ref DBSecret.Arn
-          PARAMETER_ARN: !Ref ParameterStore.Arn
+          DB_SECRET_ARN: !ImportValue "arn:aws:secretsmanager:*:*:secret:${ResourcePrefix}-db-secret-*"
       Tags:
         - Key: Name
           Value: !Sub "${ResourcePrefix}-access-db-lambda"
@@ -37,3 +38,5 @@ Resources:
           Value: !Ref AWS::AccountId
         - Key: App
           Value: !Ref AppName
+        - Key: Environment
+          Value: !Ref Environment

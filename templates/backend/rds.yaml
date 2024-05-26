@@ -8,6 +8,9 @@ Parameters:
   ResourcePrefix:
     Type: String
     Default: "MRG"
+  Environment:
+    Type: String
+    Default: "ENV"
 
 Resources:
   DBSubnetGroup:
@@ -31,8 +34,8 @@ Resources:
       AllocatedStorage: 20
       DBInstanceClass: db.t2.micro
       Engine: mysql
-      MasterUsername: !Sub "{{resolve:secretsmanager:${DBSecretARN}:SecretString:username}}"
-      MasterUserPassword: !Sub "{{resolve:secretsmanager:${DBSecretARN}:SecretString:password}}"
+      MasterUsername: !Sub "{{resolve:secretsmanager:${DBSecret.Arn}:SecretString:username}}"
+      MasterUserPassword: !Sub "{{resolve:secretsmanager:${DBSecret.Arn}:SecretString:password}}"
       EngineVersion: 8.0.28
       StorageType: gp2
       MultiAZ: false
@@ -49,4 +52,6 @@ Resources:
           Value: !Ref AWS::AccountId
         - Key: App
           Value: !Ref AppName
-      RoleArn: !GetAtt DBInstanceReadSecretRole.Arn
+        - Key: Environment
+          Value: !Ref Environment          
+      RoleArn: !GetAtt LambdaReadSecretRole.Arn

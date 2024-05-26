@@ -7,6 +7,7 @@ TEMPLATE_DIR="templates/backend"  # Directorio donde se almacenan las plantillas
 # Nombres y prefijos personalizados
 APP_NAME="MRGamingBackend"
 RESOURCE_PREFIX="MGB"
+ENVIRONMENT="DEV"
 
 # Crear el directorio de salida si no existe
 mkdir -p "$OUTPUT_DIR"
@@ -34,6 +35,9 @@ Parameters:
   EndpointIp:
     Type: String
     Default: \"203.0.113.0/24\"
+  Environment:
+    Type: String
+    Default: \"$ENVIRONMENT\"
 
 Resources:
 "
@@ -45,6 +49,7 @@ for template_file in "$TEMPLATE_DIR"/*.yaml; do
   # Reemplazar los placeholders
   content=${content//MRGApp/$APP_NAME}
   content=${content//MRG/$RESOURCE_PREFIX}
+  content=${content//ENV/$ENVIRONMENT}
 
   # Retirar las líneas hasta "Resources:"
   filtered_content=$(echo "$content" | sed -n '/Resources:/,$p' | tail -n +2)

@@ -17,6 +17,9 @@ Parameters:
   ResourcePrefix:
     Type: String
     Default: "MRG"
+  Environment:
+    Type: String
+    Default: "ENV"
 
 Resources:
   VPC:
@@ -32,6 +35,8 @@ Resources:
           Value: !Ref AWS::AccountId
         - Key: App
           Value: !Ref AppName
+        - Key: Environment
+          Value: !Ref Environment
 
   PublicSubnet:
     Type: AWS::EC2::Subnet
@@ -46,6 +51,8 @@ Resources:
           Value: !Ref AWS::AccountId
         - Key: App
           Value: !Ref AppName
+        - Key: Environment
+          Value: !Ref Environment
 
   PrivateSubnet:
     Type: AWS::EC2::Subnet
@@ -59,3 +66,5 @@ Resources:
           Value: !Ref AWS::AccountId
         - Key: App
           Value: !Ref AppName
+        - Key: Environment
+          Value: !Ref Environment

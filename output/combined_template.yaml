@@ -20,6 +20,9 @@ Parameters:
   EndpointIp:
     Type: String
     Default: "203.0.113.0/24"
+  Environment:
+    Type: String
+    Default: "DEV"
 
 Resources:
 # api_gateway_with_apikey_no_cors.yaml
@@ -48,6 +51,8 @@ Resources:
           Value: !Ref AWS::AccountId
         - Key: App
           Value: !Ref AppName
+        - Key: Environment
+          Value: !Ref Environment
 
   ApiMethod1:
     Type: AWS::ApiGateway::Method
@@ -92,6 +97,8 @@ Resources:
           Value: !Ref AWS::AccountId
         - Key: App
           Value: !Ref AppName
+        - Key: Environment
+          Value: !Ref Environment         
 
   UsagePlan:
     Type: AWS::ApiGateway::UsagePlan
@@ -110,6 +117,8 @@ Resources:
           Value: !Ref AWS::AccountId
         - Key: App
           Value: !Ref AppName
+        - Key: Environment
+          Value: !Ref Environment  
 
   UsagePlanKey:
     Type: AWS::ApiGateway::UsagePlanKey
@@ -132,6 +141,8 @@ Resources:
           Value: !Ref AWS::AccountId
         - Key: App
           Value: !Ref AppName
+        - Key: Environment
+          Value: !Ref Environment  
 
   LambdaInvokePermissionLambdaAccessDB:
     Type: AWS::Lambda::Permission
@@ -147,6 +158,8 @@ Resources:
           Value: !Ref AWS::AccountId
         - Key: App
           Value: !Ref AppName
+        - Key: Environment
+          Value: !Ref Environment  
 
 # gateways_routes.yaml
   InternetGateway:
@@ -159,6 +172,8 @@ Resources:
           Value: !Ref AWS::AccountId
         - Key: App
           Value: !Ref AppName
+        - Key: Environment
+          Value: !Ref Environment
 
   AttachGateway:
     Type: AWS::EC2::VPCGatewayAttachment
@@ -177,6 +192,8 @@ Resources:
           Value: !Ref AWS::AccountId
         - Key: App
           Value: !Ref AppName
+        - Key: Environment
+          Value: !Ref Environment
 
   PublicRoute:
     Type: AWS::EC2::Route
@@ -211,7 +228,9 @@ Resources:
           Value: !Ref AWS::AccountId
         - Key: App
           Value: !Ref AppName
-
+        - Key: Environment
+          Value: !Ref Environment
+          
   PrivateRoute:
     Type: AWS::EC2::Route
     Properties:
@@ -383,6 +402,8 @@ Resources:
           Value: !Ref AWS::AccountId
         - Key: App
           Value: !Ref AppName
+        - Key: Environment
+          Value: !Ref Environment
 
 # lambdas_external.yaml
   LambdaExternalEndpoint:
@@ -409,6 +430,8 @@ Resources:
           Value: !Ref AWS::AccountId
         - Key: App
           Value: !Ref AppName
+        - Key: Environment
+          Value: !Ref Environment
 
 # parameter_store.yaml
   ParameterStore:
@@ -424,6 +447,8 @@ Resources:
           Value: !Ref AWS::AccountId
         - Key: App
           Value: !Ref AppName
+        - Key: Environment
+          Value: !Ref Environment
 
 # rds.yaml
   DBSubnetGroup:
@@ -465,6 +490,8 @@ Resources:
           Value: !Ref AWS::AccountId
         - Key: App
           Value: !Ref AppName
+        - Key: Environment
+          Value: !Ref Environment          
       RoleArn: !GetAtt LambdaReadSecretRole.Arn
 
 # s3_bucket.yaml
@@ -479,6 +506,8 @@ Resources:
           Value: !Ref AWS::AccountId
         - Key: App
           Value: !Ref AppName
+        - Key: Environment
+          Value: !Ref Environment
 
 # secrets_manager.yaml
   DBSecret:
@@ -497,6 +526,8 @@ Resources:
           Value: !Ref AWS::AccountId
         - Key: App
           Value: !Ref AppName
+        - Key: Environment
+          Value: !Ref Environment
 
 # security_groups.yaml
   LambdaSecurityGroup:
@@ -516,6 +547,8 @@ Resources:
           Value: !Ref AWS::AccountId
         - Key: App
           Value: !Ref AppName
+        - Key: Environment
+          Value: !Ref Environment
 
   DBSecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -534,6 +567,8 @@ Resources:
           Value: !Ref AWS::AccountId
         - Key: App
           Value: !Ref AppName
+        - Key: Environment
+          Value: !Ref Environment
 
 # vpc_subnets.yaml
   VPC:
@@ -549,6 +584,8 @@ Resources:
           Value: !Ref AWS::AccountId
         - Key: App
           Value: !Ref AppName
+        - Key: Environment
+          Value: !Ref Environment
 
   PublicSubnet:
     Type: AWS::EC2::Subnet
@@ -563,6 +600,8 @@ Resources:
           Value: !Ref AWS::AccountId
         - Key: App
           Value: !Ref AppName
+        - Key: Environment
+          Value: !Ref Environment
 
   PrivateSubnet:
     Type: AWS::EC2::Subnet
@@ -576,5 +615,7 @@ Resources:
           Value: !Ref AWS::AccountId
         - Key: App
           Value: !Ref AppName
+        - Key: Environment
+          Value: !Ref Environment
 
 
